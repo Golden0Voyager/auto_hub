@@ -1,0 +1,247 @@
+projects:
+  - name: auto_animation
+    path: ../auto_animation
+    type: static-assets
+    description: Animation gallery (static HTML/CSS/JS collection)
+    capabilities:
+      - gallery.view
+    tests:
+      command: ""
+    git:
+      independent_repo: true
+
+  - name: auto_audiobook
+    path: ../auto_audiobook
+    type: python-package
+    description: "TTS, voice cloning, and audiobook pipeline — EPUB/MOBI/PDF to MP3"
+    entrypoints:
+      cli:
+        command: uv run python main.py --help
+    capabilities:
+      - audio.parse
+      - audio.clean
+      - audio.synthesize
+      - audio.assemble
+    environment:
+      required:
+        - XIAOMI_MIMO_API_KEY
+    tests:
+      command: uv run pytest
+
+  - name: auto_curation
+    path: ../auto_curation
+    type: python-package
+    description: "Art institution data collection — 61 museums/biennales, 6 crawl strategies"
+    entrypoints:
+      cli:
+        command: uv run python run_collector.py --help
+    capabilities:
+      - curation.collect
+      - curation.extract_metadata
+    environment:
+      required:
+        - XIAOMI_MIMO_API_KEY
+      optional:
+        - GEMINI_API_KEY
+        - GEMINI_BASE_URL
+        - SILICONFLOW_API_KEY
+        - SILICONFLOW_BASE_URL
+    integration:
+      shared_llm: candidate
+      workflow_node: candidate
+    tests:
+      command: uv run pytest
+
+  - name: auto_f1
+    path: ../auto_f1
+    type: mcp-server
+    description: "F1 live/historical data via MCP server — OpenF1 + FastF1"
+    entrypoints:
+      cli:
+        command: uv run python -m auto_f1 --help
+      mcp:
+        command: uv run python -m auto_f1 mcp
+    capabilities:
+      - f1.query
+      - f1.report
+      - f1.telemetry
+      - f1.tire_strategy
+    integration:
+      mcp: candidate
+    ai_clients:
+      mcp:
+        status: active
+        preferred_transport: stdio
+    tests:
+      command: uv run pytest
+
+  - name: auto_form
+    path: ../auto_form
+    type: web-app
+    description: Form generation and submission automation
+    capabilities:
+      - form.generate
+      - form.automate
+
+  - name: auto_github
+    path: ../auto_github
+    type: python-package
+    description: "GitHub trending curation — 7-stage LLM pipeline, multi-channel reports"
+    entrypoints:
+      cli:
+        command: uv run python src/main.py --help
+    capabilities:
+      - github.curate
+      - github.notify
+    environment:
+      required:
+        - SENSENOVA_API_KEY
+    integration:
+      shared_llm: candidate
+      mcp: candidate
+    tests:
+      command: uv run python src/main.py --mock
+
+  - name: auto_html
+    path: ../auto_html
+    type: python-package
+    description: "Markdown to HTML with AI image generation — SenseNova-powered"
+    entrypoints:
+      cli:
+        command: uv run md_to_html --help
+      web:
+        command: uv run uvicorn web.app:app
+    capabilities:
+      - html.render
+      - html.generate_image
+    environment:
+      required:
+        - SENSENOVA_API_KEY
+    integration:
+      shared_llm: candidate
+      mcp: candidate
+      workflow_node: candidate
+    tests:
+      command: uv run pytest
+
+  - name: auto_lingo
+    path: ../auto_lingo
+    type: python-package
+    description: "Multi-language translation with Whisper, OCR, translation memory"
+    entrypoints:
+      cli:
+        command: uv run python main.py --help
+      web:
+        command: uv run python server.py
+    capabilities:
+      - language.translate
+      - language.transcribe
+      - language.ocr
+    environment:
+      required:
+        - SENSENOVA_API_KEY
+    integration:
+      shared_llm: candidate
+      mcp: candidate
+      workflow_node: candidate
+    tests:
+      command: uv run pytest
+
+  - name: auto_motion
+    path: ../auto_motion
+    type: python-package
+    description: "Image/video generation via Agnes AI API — CLI tool"
+    entrypoints:
+      cli:
+        command: uv run auto-motion --help
+    capabilities:
+      - media.generate_image
+      - media.generate_video
+    environment:
+      required:
+        - AGNES_API_KEY
+    integration:
+      mcp: candidate
+      workflow_node: candidate
+    tests:
+      command: uv run pytest
+
+  - name: auto_nutrition
+    path: ../auto_nutrition
+    type: mcp-server
+    description: "MyFitnessPal nutrition logging via MCP server — USDA food database"
+    entrypoints:
+      cli:
+        command: uv run python main.py --help
+      mcp:
+        command: uv run python main.py mcp
+    capabilities:
+      - nutrition.log_food
+      - nutrition.log_exercise
+      - nutrition.log_measurement
+    environment:
+      required:
+        - MFP_EMAIL
+        - MFP_PASSWORD
+    integration:
+      mcp: candidate
+    ai_clients:
+      mcp:
+        status: active
+        preferred_transport: stdio
+    tests:
+      command: uv run pytest
+
+  - name: auto_pdf
+    path: ../auto_pdf
+    type: python-package
+    description: "PDF conversion, translation, summarization — Markdown/Web ↔ PDF"
+    entrypoints:
+      cli:
+        command: uv run python cli.py --help
+      web:
+        command: uv run python server.py
+    capabilities:
+      - pdf.convert
+      - pdf.translate
+      - pdf.summarize
+      - document.export
+    environment:
+      required:
+        - LLM_API_KEY
+      optional:
+        - LLM_BASE_URL
+        - LLM_MODEL
+    integration:
+      shared_llm: candidate
+      mcp: candidate
+      workflow_node: candidate
+    tests:
+      command: uv run pytest
+
+  - name: auto_resume
+    path: ../auto_resume
+    type: static-assets
+    description: "Resume/generation assets — Markdown + PDF portfolio"
+    capabilities:
+      - resume.generate
+      - resume.export
+
+  - name: auto_scrape
+    path: ../auto_scrape
+    type: python-package
+    description: "Modular scraping pipeline framework — LLM-driven config generation"
+    entrypoints:
+      cli:
+        command: uv run auto-scrape --help
+    capabilities:
+      - scrape.research
+      - scrape.extract
+    environment:
+      required:
+        - AI_PROVIDER_CHAIN
+    integration:
+      shared_llm: candidate
+      workflow_node: candidate
+    tests:
+      command: uv run pytest
