@@ -1,0 +1,47 @@
+{
+  "pipeline": [
+    {
+      "name": "scrape",
+      "project": "auto_scrape",
+      "command": "uv",
+      "args": ["run", "auto-scrape", "crawl", "--url", "https://example.com"],
+      "retry_limit": 1,
+      "timeout_seconds": 120
+    },
+    {
+      "name": "convert-pdf",
+      "project": "auto_pdf",
+      "command": "uv",
+      "args": ["run", "auto-pdf", "convert", "--input", "source/raw.md"],
+      "dependencies": ["scrape"]
+    },
+    {
+      "name": "translate",
+      "project": "auto_lingo",
+      "command": "uv",
+      "args": ["run", "auto-lingo", "translate", "--input", "intermediate/scrape/output.pdf"],
+      "dependencies": ["convert-pdf"]
+    },
+    {
+      "name": "htmlify",
+      "project": "auto_html",
+      "command": "uv",
+      "args": ["run", "auto-html", "render", "--input", "intermediate/translate/output.md"],
+      "dependencies": ["translate"]
+    },
+    {
+      "name": "publish",
+      "project": "auto_github",
+      "command": "uv",
+      "args": ["run", "auto-github", "publish", "--input", "intermediate/htmlify/output.html"],
+      "dependencies": ["htmlify"]
+    }
+  ],
+  "manifest": {
+    "title": "Scrape → PDF → Translate → HTML → GitHub Publish",
+    "source_url": "https://example.com",
+    "source_project": "auto_scrape",
+    "language": "zh-CN",
+    "pipeline": ["scrape", "convert-pdf", "translate", "htmlify", "publish"]
+  }
+}
