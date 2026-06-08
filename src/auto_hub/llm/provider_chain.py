@@ -30,13 +30,28 @@ def load_provider_chain() -> list[ProviderConfig]:
 
     providers: list[ProviderConfig] = []
     for name in names:
-        api_key = os.getenv(f"{name}_API_KEY", "")
-        if not api_key:
-            logger.warning("Skipping provider %s: no API key", name)
-            continue
-
-        base_url = os.getenv(f"{name}_BASE_URL", DEFAULT_BASE_URLS.get(name, ""))
-        model = os.getenv(f"{name}_MODEL", "")
+        if name == "AZURE_OPENAI":
+            api_key = os.getenv("AZURE_OPENAI_API_KEY", "")
+            if not api_key:
+                logger.warning("Skipping provider %s: no API key", name)
+                continue
+            base_url = os.getenv("AZURE_OPENAI_ENDPOINT", "")
+            model = os.getenv("AZURE_OPENAI_MODEL", "")
+        elif name in ("ANTHROPIC", "GEMINI"):
+            # Native SDK providers — base_url is optional
+            api_key = os.getenv(f"{name}_API_KEY", "")
+            if not api_key:
+                logger.warning("Skipping provider %s: no API key", name)
+                continue
+            base_url = os.getenv(f"{name}_BASE_URL", "")
+            model = os.getenv(f"{name}_MODEL", "")
+        else:
+            api_key = os.getenv(f"{name}_API_KEY", "")
+            if not api_key:
+                logger.warning("Skipping provider %s: no API key", name)
+                continue
+            base_url = os.getenv(f"{name}_BASE_URL", DEFAULT_BASE_URLS.get(name, ""))
+            model = os.getenv(f"{name}_MODEL", "")
         providers.append(
             ProviderConfig(
                 name=name,
