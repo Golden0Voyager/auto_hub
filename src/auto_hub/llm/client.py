@@ -4,7 +4,7 @@ import asyncio
 import logging
 import os
 import time
-from collections.abc import Awaitable, Callable
+from collections.abc import AsyncIterator, Awaitable, Callable, Iterator
 from typing import Any, TypeVar
 
 from openai import AsyncOpenAI, OpenAI, RateLimitError
@@ -192,7 +192,35 @@ class LLMClient:
     def from_env(cls, **kwargs: Any) -> LLMClient:
         return cls(**kwargs)
 
-    def _get_client(self, config: ProviderConfig) -> OpenAI:
+    def _get_client(self, config: ProviderConfig) -> Any:
+        if config.name.startswith("ANTHROPIC"):
+            from anthropic import Anthropic
+            from auto_hub.llm.adapters import AnthropicClientWrapper
+            return AnthropicClientWrapper(Anthropic(api_key=config.api_key), config.model)
+
+        if config.name.startswith("GEMINI"):
+            from google import genai
+            from auto_hub.llm.adapters import GeminiClientWrapper
+            return GeminiClientWrapper(genai.Client(api_key=config.api_key), config.model)
+
+        if config.name.startswith("AZURE"):
+            from openai import AzureOpenAI
+            api_version = os.getenv("AZURE_OPENAI_API_VERSION", "2024-02-01")
+            cache_key = f"{config.name}:{config.base_url}:{api_version}"
+            if cache_key not in self._client_cache:
+                kwargs: dict[str, Any] = {
+                    "api_key": config.api_key,
+                    "api_version": api_version,
+                    "azure_endpoint": config.base_url,
+                    "timeout": 180.0,
+                }
+                proxy = os.getenv("PROXY") or os.getenv("HTTPS_PROXY") or os.getenv("HTTP_PROXY")
+                if proxy:
+                    import httpx
+                    kwargs["http_client"] = httpx.Client(proxy=proxy)
+                self._client_cache[cache_key] = AzureOpenAI(**kwargs)
+            return self._client_cache[cache_key]
+
         cache_key = f"{config.name}:{config.base_url}"
         if cache_key not in self._client_cache:
             self._client_cache[cache_key] = OpenAI(
@@ -277,6 +305,171 @@ class LLMClient:
         raw = self.chat(messages, **kwargs)
         return parse_llm_json(raw)
 
+    def chat_stream(
+        self,
+        messages: list[ChatCompletionMessageParam],
+        *,
+        model: str | None = None,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
+        response_format: dict[str, str] | None = None,
+    ) -> Iterator[str]:
+        """Stream response text chunks from the LLM.
+
+        Iterates over the provider chain; yields each content chunk as it
+        arrives. Falls back to the next provider if the current one fails
+        to establish a stream.
+        """
+        try:
+            asyncio.get_running_loop()
+            in_loop = True
+        except RuntimeError:
+            in_loop = False
+        if in_loop:
+            raise RuntimeError(
+                "LLMClient.chat_stream() cannot be called from a running event loop; "
+                "use AsyncLLMClient.chat_stream() in async contexts."
+            )
+
+        chain = load_provider_chain()
+        if not chain:
+            raise RuntimeError("No LLM providers configured (check AI_PROVIDER_CHAIN)")
+
+        for provider in chain:
+            client = self._get_client(provider)
+            try:
+                effective_model = model or provider.model
+                if not effective_model:
+                    logger.warning("No model specified for %s, skipping", provider.name)
+                    continue
+                kwargs = _build_kwargs(
+                    effective_model, messages, temperature, max_tokens, response_format
+                )
+                kwargs["stream"] = True
+                stream = client.chat.completions.create(**kwargs)
+                for chunk in stream:
+                    content = chunk.choices[0].delta.content or ""
+                    if content:
+                        yield content
+                return
+            except Exception as exc:
+                logger.warning("Streaming failed on %s: %s", provider.name, exc)
+                continue
+
+        raise RuntimeError("All providers exhausted for streaming")
+
+    def response(
+        self,
+        input_text: str,
+        *,
+        model: str | None = None,
+        instructions: str | None = None,
+        tools: list[dict[str, Any]] | None = None,
+    ) -> str:
+        """Call OpenAI Responses API (non-streaming).
+
+        Only providers whose client exposes a ``responses`` attribute
+        (e.g. OpenAI, Azure OpenAI) are attempted; others are skipped.
+        """
+        try:
+            asyncio.get_running_loop()
+            in_loop = True
+        except RuntimeError:
+            in_loop = False
+        if in_loop:
+            raise RuntimeError(
+                "LLMClient.response() cannot be called from a running event loop; "
+                "use AsyncLLMClient.response() in async contexts."
+            )
+
+        chain = load_provider_chain()
+        if not chain:
+            raise RuntimeError("No LLM providers configured (check AI_PROVIDER_CHAIN)")
+
+        last_error: Exception | None = None
+        for provider in chain:
+            client = self._get_client(provider)
+            if not hasattr(client, "responses"):
+                continue
+            try:
+                effective_model = model or provider.model
+                if not effective_model:
+                    logger.warning("No model specified for %s, skipping", provider.name)
+                    continue
+                kwargs: dict[str, Any] = {"model": effective_model, "input": input_text}
+                if instructions:
+                    kwargs["instructions"] = instructions
+                if tools:
+                    kwargs["tools"] = tools
+                resp = client.responses.create(**kwargs)
+                return resp.output_text
+            except Exception as exc:
+                logger.warning("Responses API failed on %s: %s", provider.name, exc)
+                last_error = exc
+                continue
+
+        raise RuntimeError(
+            f"Responses API failed on all compatible providers. Last error: {last_error}"
+        )
+
+    def response_stream(
+        self,
+        input_text: str,
+        *,
+        model: str | None = None,
+        instructions: str | None = None,
+        tools: list[dict[str, Any]] | None = None,
+    ) -> Iterator[str]:
+        """Call OpenAI Responses API with streaming.
+
+        Yields text chunks as they arrive. Only providers whose client
+        exposes a ``responses`` attribute are attempted.
+        """
+        try:
+            asyncio.get_running_loop()
+            in_loop = True
+        except RuntimeError:
+            in_loop = False
+        if in_loop:
+            raise RuntimeError(
+                "LLMClient.response_stream() cannot be called from a running event loop; "
+                "use AsyncLLMClient.response_stream() in async contexts."
+            )
+
+        chain = load_provider_chain()
+        if not chain:
+            raise RuntimeError("No LLM providers configured (check AI_PROVIDER_CHAIN)")
+
+        for provider in chain:
+            client = self._get_client(provider)
+            if not hasattr(client, "responses"):
+                continue
+            try:
+                effective_model = model or provider.model
+                if not effective_model:
+                    logger.warning("No model specified for %s, skipping", provider.name)
+                    continue
+                kwargs: dict[str, Any] = {
+                    "model": effective_model,
+                    "input": input_text,
+                    "stream": True,
+                }
+                if instructions:
+                    kwargs["instructions"] = instructions
+                if tools:
+                    kwargs["tools"] = tools
+                for event in client.responses.create(**kwargs):
+                    if getattr(event, "type", "") == "response.output_text.delta":
+                        delta = getattr(event, "delta", "")
+                        if delta:
+                            yield delta
+                return
+            except Exception as exc:
+                logger.warning("Responses API streaming failed on %s: %s", provider.name, exc)
+                continue
+
+        raise RuntimeError("Responses API streaming failed on all compatible providers")
+
     def reset_cache(self) -> None:
         self._client_cache.clear()
         reset_provider_chain()
@@ -301,7 +494,35 @@ class AsyncLLMClient:
     def from_env(cls, **kwargs: Any) -> AsyncLLMClient:
         return cls(**kwargs)
 
-    def _get_client(self, config: ProviderConfig) -> AsyncOpenAI:
+    def _get_client(self, config: ProviderConfig) -> Any:
+        if config.name.startswith("ANTHROPIC"):
+            from anthropic import AsyncAnthropic
+            from auto_hub.llm.adapters import AsyncAnthropicClientWrapper
+            return AsyncAnthropicClientWrapper(AsyncAnthropic(api_key=config.api_key), config.model)
+
+        if config.name.startswith("GEMINI"):
+            from google import genai
+            from auto_hub.llm.adapters import AsyncGeminiClientWrapper
+            return AsyncGeminiClientWrapper(genai.Client(api_key=config.api_key), config.model)
+
+        if config.name.startswith("AZURE"):
+            from openai import AsyncAzureOpenAI
+            api_version = os.getenv("AZURE_OPENAI_API_VERSION", "2024-02-01")
+            cache_key = f"{config.name}:{config.base_url}:{api_version}"
+            if cache_key not in self._client_cache:
+                kwargs: dict[str, Any] = {
+                    "api_key": config.api_key,
+                    "api_version": api_version,
+                    "azure_endpoint": config.base_url,
+                    "timeout": 180.0,
+                }
+                proxy = os.getenv("PROXY") or os.getenv("HTTPS_PROXY") or os.getenv("HTTP_PROXY")
+                if proxy:
+                    import httpx
+                    kwargs["http_client"] = httpx.AsyncClient(proxy=proxy)
+                self._client_cache[cache_key] = AsyncAzureOpenAI(**kwargs)
+            return self._client_cache[cache_key]
+
         cache_key = f"{config.name}:{config.base_url}"
         if cache_key not in self._client_cache:
             self._client_cache[cache_key] = AsyncOpenAI(
@@ -352,6 +573,138 @@ class AsyncLLMClient:
     ) -> Any:
         raw = await self.chat(messages, **kwargs)
         return parse_llm_json(raw)
+
+    async def chat_stream(
+        self,
+        messages: list[ChatCompletionMessageParam],
+        *,
+        model: str | None = None,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
+        response_format: dict[str, str] | None = None,
+    ) -> AsyncIterator[str]:
+        """Async stream response text chunks from the LLM.
+
+        Iterates over the provider chain; yields each content chunk as it
+        arrives. Falls back to the next provider if the current one fails
+        to establish a stream.
+        """
+        chain = load_provider_chain()
+        if not chain:
+            raise RuntimeError("No LLM providers configured (check AI_PROVIDER_CHAIN)")
+
+        for provider in chain:
+            client = self._get_client(provider)
+            try:
+                effective_model = model or provider.model
+                if not effective_model:
+                    logger.warning("No model specified for %s, skipping", provider.name)
+                    continue
+                kwargs = _build_kwargs(
+                    effective_model, messages, temperature, max_tokens, response_format
+                )
+                kwargs["stream"] = True
+                stream = await client.chat.completions.create(**kwargs)
+                async for chunk in stream:
+                    content = chunk.choices[0].delta.content or ""
+                    if content:
+                        yield content
+                return
+            except Exception as exc:
+                logger.warning("Streaming failed on %s: %s", provider.name, exc)
+                continue
+
+        raise RuntimeError("All providers exhausted for streaming")
+
+    async def response(
+        self,
+        input_text: str,
+        *,
+        model: str | None = None,
+        instructions: str | None = None,
+        tools: list[dict[str, Any]] | None = None,
+    ) -> str:
+        """Async call OpenAI Responses API (non-streaming).
+
+        Only providers whose client exposes a ``responses`` attribute
+        (e.g. OpenAI, Azure OpenAI) are attempted; others are skipped.
+        """
+        chain = load_provider_chain()
+        if not chain:
+            raise RuntimeError("No LLM providers configured (check AI_PROVIDER_CHAIN)")
+
+        last_error: Exception | None = None
+        for provider in chain:
+            client = self._get_client(provider)
+            if not hasattr(client, "responses"):
+                continue
+            try:
+                effective_model = model or provider.model
+                if not effective_model:
+                    logger.warning("No model specified for %s, skipping", provider.name)
+                    continue
+                kwargs: dict[str, Any] = {"model": effective_model, "input": input_text}
+                if instructions:
+                    kwargs["instructions"] = instructions
+                if tools:
+                    kwargs["tools"] = tools
+                resp = await client.responses.create(**kwargs)
+                return resp.output_text
+            except Exception as exc:
+                logger.warning("Responses API failed on %s: %s", provider.name, exc)
+                last_error = exc
+                continue
+
+        raise RuntimeError(
+            f"Responses API failed on all compatible providers. Last error: {last_error}"
+        )
+
+    async def response_stream(
+        self,
+        input_text: str,
+        *,
+        model: str | None = None,
+        instructions: str | None = None,
+        tools: list[dict[str, Any]] | None = None,
+    ) -> AsyncIterator[str]:
+        """Async call OpenAI Responses API with streaming.
+
+        Yields text chunks as they arrive.
+        """
+        chain = load_provider_chain()
+        if not chain:
+            raise RuntimeError("No LLM providers configured (check AI_PROVIDER_CHAIN)")
+
+        for provider in chain:
+            client = self._get_client(provider)
+            if not hasattr(client, "responses"):
+                continue
+            try:
+                effective_model = model or provider.model
+                if not effective_model:
+                    logger.warning("No model specified for %s, skipping", provider.name)
+                    continue
+                kwargs: dict[str, Any] = {
+                    "model": effective_model,
+                    "input": input_text,
+                    "stream": True,
+                }
+                if instructions:
+                    kwargs["instructions"] = instructions
+                if tools:
+                    kwargs["tools"] = tools
+                stream = await client.responses.create(**kwargs)
+                async for event in stream:
+                    if getattr(event, "type", "") == "response.output_text.delta":
+                        delta = getattr(event, "delta", "")
+                        if delta:
+                            yield delta
+                return
+            except Exception as exc:
+                logger.warning("Responses API streaming failed on %s: %s", provider.name, exc)
+                continue
+
+        raise RuntimeError("Responses API streaming failed on all compatible providers")
 
     def reset_cache(self) -> None:
         self._client_cache.clear()
