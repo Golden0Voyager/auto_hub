@@ -13,12 +13,14 @@ class ProviderConfig:
 
 
 DEFAULT_BASE_URLS: dict[str, str] = {
-    "SENSENOVA": "https://api.sensenova.cn/compatible-mode/v2",
+    # International providers (priority order)
     "OPENAI": "https://api.openai.com/v1",
-    "MODELSCOPE": "https://api-inference.modelscope.cn/v1",
     "GROQ": "https://api.groq.com/openai/v1",
     "OPENROUTER": "https://openrouter.ai/api/v1",
+    # Domestic / China-based providers
     "DEEPSEEK": "https://api.deepseek.com/v1",
+    "MODELSCOPE": "https://api-inference.modelscope.cn/v1",
+    "SENSENOVA": "https://api.sensenova.cn/compatible-mode/v2",
 }
 
 HARD_FAIL_PATTERNS: list[str] = [
@@ -30,6 +32,9 @@ HARD_FAIL_PATTERNS: list[str] = [
     "令牌已过期",
     "no endpoints found",
     "authentication",
+    "invalid_x_api_key",
+    "permission_error",
+    "not_found_error",
 ]
 
 RETRYABLE_STATUS_CODES: set[int] = {429, 502, 503, 504}
