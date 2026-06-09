@@ -5,6 +5,7 @@ import json
 import tempfile
 from pathlib import Path
 import os
+import shutil
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -516,14 +517,17 @@ class TestRunnerV2:
             ]
         )
         runner = JobRunner(job_spec)
-        result = runner._execute_step(job_spec.pipeline[0])
-        assert result.error is not None
-        assert "Timeout" in result.error
-        assert result.exit_code == -1
-        # Verify log file was written
-        log_path = runner.base_dir / "logs" / "slow.log"
-        assert log_path.exists()
-        assert "TIMEOUT" in log_path.read_text()
+        try:
+            result = runner._execute_step(job_spec.pipeline[0])
+            assert result.error is not None
+            assert "Timeout" in result.error
+            assert result.exit_code == -1
+            # Verify log file was written
+            log_path = runner.base_dir / "logs" / "slow.log"
+            assert log_path.exists()
+            assert "TIMEOUT" in log_path.read_text()
+        finally:
+            shutil.rmtree(runner.base_dir, ignore_errors=True)
 
 
 # ═══════════════════════════════════════════════════════════════
