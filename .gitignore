@@ -8,3 +8,4 @@ build/
 *.pyc
 .DS_Store
 *.log
+.coverage*
