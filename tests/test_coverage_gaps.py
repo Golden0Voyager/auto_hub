@@ -2,15 +2,14 @@
 from __future__ import annotations
 
 import json
-import tempfile
-from pathlib import Path
 import os
 import shutil
+import tempfile
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 import yaml
-
 
 # ═══════════════════════════════════════════════════════════════
 # cli.py — workflow commands (lines 161-224)
@@ -20,6 +19,7 @@ class TestCLIWorkflow:
 
     def test_workflow_run_json_success(self):
         from click.testing import CliRunner
+
         from auto_hub.cli import main
 
         pipeline = {
@@ -39,6 +39,7 @@ class TestCLIWorkflow:
 
     def test_workflow_run_yaml(self):
         from click.testing import CliRunner
+
         from auto_hub.cli import main
 
         pipeline = {
@@ -58,6 +59,7 @@ class TestCLIWorkflow:
 
     def test_workflow_run_with_custom_job_id(self):
         from click.testing import CliRunner
+
         from auto_hub.cli import main
 
         pipeline = {
@@ -79,6 +81,7 @@ class TestCLIWorkflow:
 
     def test_workflow_run_file_not_found(self):
         from click.testing import CliRunner
+
         from auto_hub.cli import main
 
         runner = CliRunner()
@@ -87,8 +90,9 @@ class TestCLIWorkflow:
 
     def test_workflow_status(self):
         from click.testing import CliRunner
+
         from auto_hub.cli import main
-        from auto_hub.workflow.models import ArtifactManifest, StepSpec, JobSpec
+        from auto_hub.workflow.models import ArtifactManifest, JobSpec, StepSpec
         from auto_hub.workflow.runner import JobRunner
 
         runner = CliRunner()
@@ -98,12 +102,13 @@ class TestCLIWorkflow:
                 manifest=ArtifactManifest(job_id="test-job", status="pending", pipeline=["s1"]),
                 work_dir=tmpdir,
             )
-            jr = JobRunner(spec)
+            JobRunner(spec)
             result = runner.invoke(main, ["workflow", "status", tmpdir])
             assert "test-job" in result.output or "Error" in result.output or result.exit_code == 0
 
     def test_workflow_status_nonexistent_job(self):
         from click.testing import CliRunner
+
         from auto_hub.cli import main
 
         runner = CliRunner()
@@ -112,6 +117,7 @@ class TestCLIWorkflow:
 
     def test_workflow_run_failed_step_shows_errors(self):
         from click.testing import CliRunner
+
         from auto_hub.cli import main
 
         pipeline = {
@@ -291,8 +297,8 @@ class TestGatewayGaps:
 class TestRunnerGaps:
 
     def test_run_sets_status_failed_on_exception(self):
+        from auto_hub.workflow.models import ArtifactManifest, JobSpec, StepSpec
         from auto_hub.workflow.runner import JobRunner
-        from auto_hub.workflow.models import JobSpec, ArtifactManifest, StepSpec
 
         tmp = tempfile.mkdtemp()
         manifest = ArtifactManifest(
@@ -310,8 +316,8 @@ class TestRunnerGaps:
         assert result.job_status in ("failed", "failed")
 
     def test_run_catches_workflow_error(self):
+        from auto_hub.workflow.models import ArtifactManifest, JobSpec, StepSpec, WorkflowError
         from auto_hub.workflow.runner import JobRunner
-        from auto_hub.workflow.models import JobSpec, ArtifactManifest, StepSpec, WorkflowError
 
         tmp = tempfile.mkdtemp()
         manifest = ArtifactManifest(
@@ -329,8 +335,8 @@ class TestRunnerGaps:
         assert result is not None
 
     def test_execute_step_handles_timeout(self):
+        from auto_hub.workflow.models import ArtifactManifest, JobSpec, StepSpec
         from auto_hub.workflow.runner import JobRunner
-        from auto_hub.workflow.models import JobSpec, StepSpec, ArtifactManifest
 
         tmp = tempfile.mkdtemp()
         spec = JobSpec(
@@ -344,8 +350,8 @@ class TestRunnerGaps:
         assert result.status in ("failed", "completed")
 
     def test_execute_step_file_not_found(self):
+        from auto_hub.workflow.models import ArtifactManifest, JobSpec, StepSpec
         from auto_hub.workflow.runner import JobRunner
-        from auto_hub.workflow.models import JobSpec, StepSpec, ArtifactManifest
 
         tmp = tempfile.mkdtemp()
         spec = JobSpec(
@@ -475,7 +481,7 @@ class TestGatewayV2:
         assert "Missing" in result
 
     def test_llm_chat_import_error(self):
-        from auto_hub.mcp.gateway import llm_chat, _gateway_stats
+        from auto_hub.mcp.gateway import _gateway_stats, llm_chat
 
         _gateway_stats.llm_failures = 0
         with patch("auto_hub.mcp.gateway._get_llm_client", side_effect=ImportError("no llm")):
@@ -507,7 +513,6 @@ class TestRunnerV2:
         assert "not found" in str(exc_info.value).lower()
 
     def test_execute_step_timeout_writes_log_and_sets_error(self):
-        import subprocess
         from auto_hub.workflow import JobRunner, JobSpec
         from auto_hub.workflow.models import StepSpec
 
@@ -573,6 +578,7 @@ class TestCLIV2:
 
     def test_list_no_projects(self):
         from click.testing import CliRunner
+
         from auto_hub.cli import main
 
         mock_loader = MagicMock()
@@ -586,6 +592,7 @@ class TestCLIV2:
 
     def test_list_with_project(self):
         from click.testing import CliRunner
+
         from auto_hub.cli import main
 
         mock_proj = MagicMock()
@@ -603,6 +610,7 @@ class TestCLIV2:
 
     def test_list_file_not_found_error(self):
         from click.testing import CliRunner
+
         from auto_hub.cli import main
 
         mock_loader = MagicMock()
@@ -614,6 +622,7 @@ class TestCLIV2:
 
     def test_list_generic_error(self):
         from click.testing import CliRunner
+
         from auto_hub.cli import main
 
         mock_loader = MagicMock()
@@ -627,6 +636,7 @@ class TestCLIV2:
 
     def test_show_file_not_found_error(self):
         from click.testing import CliRunner
+
         from auto_hub.cli import main
 
         mock_loader = MagicMock()
@@ -638,6 +648,7 @@ class TestCLIV2:
 
     def test_show_generic_error(self):
         from click.testing import CliRunner
+
         from auto_hub.cli import main
 
         mock_loader = MagicMock()
@@ -651,6 +662,7 @@ class TestCLIV2:
 
     def test_status_with_missing(self):
         from click.testing import CliRunner
+
         from auto_hub.cli import main
 
         mock_proj = MagicMock()
@@ -668,6 +680,7 @@ class TestCLIV2:
 
     def test_status_error_handling(self):
         from click.testing import CliRunner
+
         from auto_hub.cli import main
 
         mock_loader = MagicMock()
@@ -679,6 +692,7 @@ class TestCLIV2:
 
     def test_status_generic_error(self):
         from click.testing import CliRunner
+
         from auto_hub.cli import main
 
         mock_loader = MagicMock()
@@ -692,6 +706,7 @@ class TestCLIV2:
 
     def test_env_project_not_found(self):
         from click.testing import CliRunner
+
         from auto_hub.cli import main
 
         mock_loader = MagicMock()
@@ -703,6 +718,7 @@ class TestCLIV2:
 
     def test_env_file_not_found_error(self):
         from click.testing import CliRunner
+
         from auto_hub.cli import main
 
         mock_loader = MagicMock()
@@ -714,6 +730,7 @@ class TestCLIV2:
 
     def test_env_generic_error(self):
         from click.testing import CliRunner
+
         from auto_hub.cli import main
 
         mock_loader = MagicMock()
@@ -727,6 +744,7 @@ class TestCLIV2:
 
     def test_mcp_command_calls_main(self):
         from click.testing import CliRunner
+
         from auto_hub.cli import main
 
         with patch("auto_hub.mcp.gateway.main") as mock_mcp_main:
@@ -738,6 +756,7 @@ class TestCLIV2:
 
     def test_workflow_run_failed_status(self):
         from click.testing import CliRunner
+
         from auto_hub.cli import main
 
         pipeline = {"pipeline": [{"name": "s1", "project": "test", "command": "echo hi"}]}
@@ -753,9 +772,8 @@ class TestCLIV2:
         mock_manifest.steps = []
         mock_runner.run.return_value = mock_manifest
 
-        with patch("auto_hub.workflow.JobRunner", return_value=mock_runner):
-            with patch("auto_hub.workflow.JobSpec"):
-                result = CliRunner().invoke(main, ["workflow", "run", pipe_path])
+        with patch("auto_hub.workflow.JobRunner", return_value=mock_runner), patch("auto_hub.workflow.JobSpec"):
+            result = CliRunner().invoke(main, ["workflow", "run", pipe_path])
         assert "Workflow failed" in result.output
         os.unlink(pipe_path)
 
@@ -763,6 +781,7 @@ class TestCLIV2:
 
     def test_workflow_status_full_display(self):
         from click.testing import CliRunner
+
         from auto_hub.cli import main
 
         manifest = {

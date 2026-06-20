@@ -195,11 +195,13 @@ class LLMClient:
     def _get_client(self, config: ProviderConfig) -> Any:
         if config.name.startswith("ANTHROPIC"):
             from anthropic import Anthropic
+
             from auto_hub.llm.adapters import AnthropicClientWrapper
             return AnthropicClientWrapper(Anthropic(api_key=config.api_key), config.model)
 
         if config.name.startswith("GEMINI"):
             from google import genai
+
             from auto_hub.llm.adapters import GeminiClientWrapper
             return GeminiClientWrapper(genai.Client(api_key=config.api_key), config.model)
 
@@ -497,11 +499,13 @@ class AsyncLLMClient:
     def _get_client(self, config: ProviderConfig) -> Any:
         if config.name.startswith("ANTHROPIC"):
             from anthropic import AsyncAnthropic
+
             from auto_hub.llm.adapters import AsyncAnthropicClientWrapper
             return AsyncAnthropicClientWrapper(AsyncAnthropic(api_key=config.api_key), config.model)
 
         if config.name.startswith("GEMINI"):
             from google import genai
+
             from auto_hub.llm.adapters import AsyncGeminiClientWrapper
             return AsyncGeminiClientWrapper(genai.Client(api_key=config.api_key), config.model)
 
