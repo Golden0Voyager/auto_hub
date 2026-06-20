@@ -553,7 +553,7 @@ class TestAnthropicAdapter:
                 try:
                     return next(self._items)
                 except StopIteration:
-                    raise StopAsyncIteration
+                    raise StopAsyncIteration from None
 
         fake_stream = _MockAsyncIter([fake_event])
         fake_client = MagicMock()
@@ -651,7 +651,7 @@ class TestGeminiAdapter:
                 try:
                     return next(self._items)
                 except StopIteration:
-                    raise StopAsyncIteration
+                    raise StopAsyncIteration from None
 
         fake_stream = _MockAsyncIter([fake_chunk])
         fake_client = MagicMock()
@@ -713,7 +713,7 @@ class TestStreaming:
                 try:
                     return next(self._items)
                 except StopIteration:
-                    raise StopAsyncIteration
+                    raise StopAsyncIteration from None
 
         with patch("auto_hub.llm.client.AsyncOpenAI") as mock_client:
             instance = mock_client.return_value
@@ -896,7 +896,7 @@ class TestResponsesAPI:
                 try:
                     return next(self._items)
                 except StopIteration:
-                    raise StopAsyncIteration
+                    raise StopAsyncIteration from None
 
         with patch("auto_hub.llm.client.AsyncOpenAI") as mock_client:
             instance = mock_client.return_value
