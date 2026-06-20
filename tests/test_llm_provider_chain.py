@@ -1025,7 +1025,6 @@ class TestAdapterParams:
 
     def test_gemini_temperature_forwarded(self):
         """RED: temperature kwarg must reach Gemini generate_content config."""
-        from google.genai import types
 
         mock_client = MagicMock()
         mock_response = MagicMock()
@@ -1068,7 +1067,6 @@ class TestAdapterUsage:
 
     def test_gemini_usage_tokens(self):
         """RED: Gemini adapter must expose prompt/completion token counts."""
-        from google.genai import types
 
         mock_client = MagicMock()
         mock_response = MagicMock()
