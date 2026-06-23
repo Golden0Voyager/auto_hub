@@ -11,6 +11,7 @@ from auto_hub.document.extractors.base import BaseExtractor
 from auto_hub.document.extractors.markitdown import MarkItDownExtractor
 from auto_hub.document.extractors.pymupdf import PyMuPDFExtractor
 from auto_hub.document.models import ConversionResult, ConvertOptions
+from auto_hub.document.ocr import siliconflow  # noqa: F401 - registers OCR engines
 from auto_hub.document.ocr.registry import get_ocr_engine
 
 _IMAGE_EXTS = frozenset({".png", ".jpg", ".jpeg", ".tiff", ".tif", ".bmp", ".gif", ".webp"})
