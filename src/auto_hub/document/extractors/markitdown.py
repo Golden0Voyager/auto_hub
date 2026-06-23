@@ -16,7 +16,7 @@ class MarkItDownExtractor(BaseExtractor):
     """基于 MarkItDown 的通用文档提取器。"""
 
     supported_extensions: frozenset[str] = frozenset({
-        ".docx", ".xlsx", ".pptx",
+        ".docx", ".xls", ".xlsx", ".pptx",
         ".html", ".htm",
         ".epub",
         ".csv",
