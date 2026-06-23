@@ -13,6 +13,24 @@ dependencies = [
     "mcp>=1.0.0",
 ]
 
+[project.optional-dependencies]
+md = [
+    "markitdown[docx,pptx,xlsx]>=0.1.6",
+    "pymupdf>=1.27.0",
+]
+ocr = [
+    "auto_hub[md]",
+    "openai>=1.30.0",
+]
+local-ocr = [
+    "auto_hub[md]",
+    "paddleocr>=2.10.0",
+]
+all = [
+    "auto_hub[ocr]",
+    "auto_hub[local-ocr]",
+]
+
 [project.scripts]
 auto-hub = "auto_hub.cli:main"
 
