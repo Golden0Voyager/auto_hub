@@ -129,10 +129,40 @@ uv run auto-hub llm "请总结这段文字：..."
 | **CLI** | `src/auto_hub/cli.py` | 入口点——`auto-hub` 命令 |
 | **Registry** | `src/auto_hub/registry/` | 工具 Manifest 发现与元数据管理 |
 | **LLM** | `src/auto_hub/llm/` | 共享多供应商 LLM 客户端 |
+| **Document** | `src/auto_hub/document/` | 文档转 Markdown 中台（MarkItDown + PyMuPDF + OCR） |
 | **HTTP** | `src/auto_hub/http/` | 共享 HTTP 工具库 |
 | **Config** | `src/auto_hub/config/` | 统一配置模型 |
 | **MCP** | `src/auto_hub/mcp/` | MCP 聚合服务器 |
 | **Workflow** | `src/auto_hub/workflow/` | 流水线组合层 |
+
+### Document 中台
+
+```python
+from auto_hub.document import DocumentConverter, ConvertOptions
+
+converter = DocumentConverter()
+
+# 基础用法：自动识别格式并选择最佳提取策略
+result = await converter.convert("path/to/file.pdf")
+print(result.markdown)
+
+# 指定 OCR 引擎处理扫描件
+result = await converter.convert(
+    "path/to/scan.pdf",
+    options=ConvertOptions(ocr_engine="siliconflow", language="zh"),
+)
+```
+
+支持的输入格式：PDF（文本型 + 扫描型）、DOCX、PPTX、XLSX、HTML、EPUB、CSV、TXT、Markdown、JSON、图片等。
+
+OCR 引擎：SiliconFlow DeepSeek-OCR（默认）、PaddleOCR（本地，可选）。
+
+可选依赖分组：
+
+- `auto_hub[md]` — MarkItDown + PyMuPDF
+- `auto_hub[ocr]` — `[md]` + OpenAI SDK（SiliconFlow OCR）
+- `auto_hub[local-ocr]` — `[md]` + PaddleOCR
+- `auto_hub[all]` — 全部引擎
 
 ---
 
@@ -143,8 +173,8 @@ uv run auto-hub llm "请总结这段文字：..."
 | 0 | ✅ 完成 | 包骨架、CLI、Git、文档 |
 | 0.5 | 🔄 进行中 | 全工具 LLM 实现审计 |
 | 1 | ⏳ 计划中 | 项目注册表——发现所有工具 |
-| 2 | ⏳ 计划中 | 共享 LLM 层——消除重复实现 |
-| 3 | ⏳ 计划中 | 首次迁移：`auto_pdf` → 共享 LLM |
+| 2 | ✅ 完成 | 共享 LLM 层——消除重复实现 |
+| 3 | ✅ 完成 | 首次迁移：`auto_pdf` / `auto_lingo` → Document 中台 |
 | 4 | ⏳ 计划中 | 向所有工具扩展共享 LLM |
 | 5 | ⏳ 计划中 | MCP 聚合——一个入口覆盖所有工具 |
 | 6 | ⏳ 计划中 | 内容工作流组合层 |

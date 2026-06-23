@@ -129,10 +129,40 @@ uv run auto-hub llm "Summarize this text: ..."
 | **CLI** | `src/auto_hub/cli.py` | Entry point — `auto-hub` command |
 | **Registry** | `src/auto_hub/registry/` | Tool manifest discovery and metadata |
 | **LLM** | `src/auto_hub/llm/` | Shared multi-provider LLM client |
+| **Document** | `src/auto_hub/document/` | Document-to-Markdown platform (MarkItDown + PyMuPDF + OCR) |
 | **HTTP** | `src/auto_hub/http/` | Shared HTTP utilities |
 | **Config** | `src/auto_hub/config/` | Unified configuration models |
 | **MCP** | `src/auto_hub/mcp/` | MCP aggregation server |
 | **Workflow** | `src/auto_hub/workflow/` | Pipeline composition layer |
+
+### Document Platform
+
+```python
+from auto_hub.document import DocumentConverter, ConvertOptions
+
+converter = DocumentConverter()
+
+# Basic usage: auto-detect format and choose best extraction strategy
+result = await converter.convert("path/to/file.pdf")
+print(result.markdown)
+
+# Specify OCR engine for scanned documents
+result = await converter.convert(
+    "path/to/scan.pdf",
+    options=ConvertOptions(ocr_engine="siliconflow", language="zh"),
+)
+```
+
+Supported inputs: PDF (text + scanned), DOCX, PPTX, XLSX, HTML, EPUB, CSV, TXT, Markdown, JSON, images, and more.
+
+OCR engines: SiliconFlow DeepSeek-OCR (default), PaddleOCR (local, optional).
+
+Optional dependency groups:
+
+- `auto_hub[md]` — MarkItDown + PyMuPDF
+- `auto_hub[ocr]` — `[md]` + OpenAI SDK (SiliconFlow OCR)
+- `auto_hub[local-ocr]` — `[md]` + PaddleOCR
+- `auto_hub[all]` — all engines
 
 ---
 
@@ -143,8 +173,8 @@ uv run auto-hub llm "Summarize this text: ..."
 | 0 | ✅ Done | Package skeleton, CLI, Git, docs |
 | 0.5 | 🔄 In Progress | LLM implementation audit across all tools |
 | 1 | ⏳ Planned | Project registry — discover all tools |
-| 2 | ⏳ Planned | Shared LLM layer — eliminate duplication |
-| 3 | ⏳ Planned | First migration: `auto_pdf` → shared LLM |
+| 2 | ✅ Done | Shared LLM layer — eliminate duplication |
+| 3 | ✅ Done | First migration: `auto_pdf` / `auto_lingo` → Document platform |
 | 4 | ⏳ Planned | Expand shared LLM to all tools |
 | 5 | ⏳ Planned | MCP aggregation — one endpoint for all |
 | 6 | ⏳ Planned | Content workflow composition layer |
