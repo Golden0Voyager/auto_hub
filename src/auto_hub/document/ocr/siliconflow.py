@@ -70,6 +70,8 @@ class SiliconFlowOCREngine(BaseOCREngine):
             return "image/gif"
         elif image_bytes[:2] == b"BM":
             return "image/bmp"
+        elif image_bytes[:4] == b"II\x2a\x00" or image_bytes[:4] == b"MM\x00\x2a":
+            return "image/tiff"
         return "image/png"
 
     def _ocr_image(self, image_bytes: bytes, prompt: str, max_tokens: int = 8000) -> str:
