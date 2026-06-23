@@ -58,6 +58,9 @@ dev = [
     "ruff>=0.6",
     "mypy>=1.10.0",
     "click>=8.0",
+    "markitdown[docx,pptx,xlsx]>=0.1.6",
+    "pymupdf>=1.27.0",
+    "openai>=1.30.0",
 ]
 
 [tool.pytest.ini_options]
