@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 from auto_hub.document.exceptions import DocumentConversionError, ExtractionError
 from auto_hub.document.extractors.base import BaseExtractor
-from auto_hub.document.models import ConvertOptions, ConversionResult
+from auto_hub.document.models import ConversionResult, ConvertOptions
 
 try:
     import fitz
@@ -57,8 +58,6 @@ class PyMuPDFExtractor(BaseExtractor):
             doc.close()
 
     def _extract_text(self, pdf_path: str) -> str:
-        import re
-
         doc = fitz.open(pdf_path)
         try:
             pages_data = []
@@ -88,7 +87,6 @@ class PyMuPDFExtractor(BaseExtractor):
                 line_counts[line] = line_counts.get(line, 0) + 1
 
         threshold = max(2, len(pages_data) * self.header_footer_threshold)
-        import re
 
         return {
             line
