@@ -72,7 +72,8 @@ class SiliconFlowOCREngine(BaseOCREngine):
             max_tokens=max_tokens,
             temperature=0.1,
         )
-        return resp.choices[0].message.content.strip()
+        content = resp.choices[0].message.content
+        return content.strip() if content else ""
 
     async def recognize(
         self,

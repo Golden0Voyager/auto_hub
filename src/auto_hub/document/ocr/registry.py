@@ -7,7 +7,7 @@ from auto_hub.document.ocr.base import BaseOCREngine
 class OCRRegistry:
     """OCR 引擎注册表。"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._engines: dict[str, type[BaseOCREngine]] = {}
 
     def register(self, engine_class: type[BaseOCREngine]) -> None:
