@@ -58,14 +58,29 @@ class SiliconFlowOCREngine(BaseOCREngine):
             self._client = OpenAI(api_key=self._get_api_key(), base_url=_BASE_URL)
         return self._client
 
+    def _detect_mime_type(self, image_bytes: bytes) -> str:
+        """从文件魔数检测 MIME 类型。"""
+        if image_bytes[:2] == b"\xff\xd8":
+            return "image/jpeg"
+        elif image_bytes[:4] == b"\x89PNG":
+            return "image/png"
+        elif image_bytes[:4] == b"RIFF" and image_bytes[8:12] == b"WEBP":
+            return "image/webp"
+        elif image_bytes[:3] == b"GIF":
+            return "image/gif"
+        elif image_bytes[:2] == b"BM":
+            return "image/bmp"
+        return "image/png"
+
     def _ocr_image(self, image_bytes: bytes, prompt: str, max_tokens: int = 8000) -> str:
         b64 = base64.b64encode(image_bytes).decode("utf-8")
+        mime_type = self._detect_mime_type(image_bytes)
         resp = self.client.chat.completions.create(
             model=_MODEL,
             messages=[{
                 "role": "user",
                 "content": [
-                    {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{b64}"}},
+                    {"type": "image_url", "image_url": {"url": f"data:{mime_type};base64,{b64}"}},
                     {"type": "text", "text": prompt},
                 ],
             }],
