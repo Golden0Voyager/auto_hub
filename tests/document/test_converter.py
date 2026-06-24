@@ -122,7 +122,7 @@ async def test_convert_image_direct_ocr(converter: DocumentConverter, tmp_path: 
 
 @pytest.mark.asyncio
 async def test_convert_ocr_engine_error(converter: DocumentConverter, tmp_path: Path, mocker: MockerFixture):
-    """OCR engine error should propagate."""
+    """Generic OCR engine error should propagate."""
     img_path = tmp_path / "test.png"
     img_path.write_bytes(b"\x89PNG\r\n\x1a\n")
 
@@ -132,6 +132,23 @@ async def test_convert_ocr_engine_error(converter: DocumentConverter, tmp_path: 
     )
 
     with pytest.raises(Exception, match="OCR engine not found"):
+        await converter.convert(img_path)
+
+
+@pytest.mark.asyncio
+async def test_convert_ocr_engine_specific_error(converter: DocumentConverter, tmp_path: Path, mocker: MockerFixture):
+    """OCREngineError should be caught and re-raised (covers bare raise)."""
+    from auto_hub.document.exceptions import OCREngineError
+
+    img_path = tmp_path / "test.png"
+    img_path.write_bytes(b"\x89PNG\r\n\x1a\n")
+
+    mocker.patch(
+        "auto_hub.document.converter.get_ocr_engine",
+        side_effect=OCREngineError("specific OCR error"),
+    )
+
+    with pytest.raises(OCREngineError, match="specific OCR error"):
         await converter.convert(img_path)
 
 

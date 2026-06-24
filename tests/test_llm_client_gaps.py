@@ -1,9 +1,6 @@
 """Coverage gap tests for auto_hub.llm.client — internal helper functions."""
 
-import os
 from unittest.mock import MagicMock, patch
-
-import pytest
 
 # Import the module directly to access private helpers
 from auto_hub.llm import client as llm_client
