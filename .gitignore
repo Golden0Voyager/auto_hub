@@ -8,4 +8,6 @@ build/
 *.pyc
 .DS_Store
 *.log
+.mypy_cache/
 .coverage*
+htmlcov/
