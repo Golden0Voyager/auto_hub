@@ -7,7 +7,6 @@ import pytest
 from auto_hub.llm import AsyncLLMClient, LLMClient, reset_provider_chain
 from auto_hub.llm import client as llm_client
 
-
 # ---------------------------------------------------------------------------
 # Helpers — set up a minimal provider chain
 # ---------------------------------------------------------------------------
