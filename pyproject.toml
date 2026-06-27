@@ -70,6 +70,7 @@ asyncio_mode = "auto"
 
 [tool.mypy]
 ignore_missing_imports = true
+files = ["src/auto_hub/"]
 
 [tool.coverage.run]
 source = ["auto_hub"]
